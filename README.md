@@ -1,6 +1,6 @@
 # elb-logs-to-cloudwatch
 
-Initially this project sift through ELB logs and extract 502 and 502s and publish to cloudwatch with the
+Initially this project sifts through ELB logs, extracts 502 and 503s and publish to cloudwatch with the
 loadbalancer and target group as dimensions. It can be used to trigger alarms on cloudwatch in order to scale
 services.
 
