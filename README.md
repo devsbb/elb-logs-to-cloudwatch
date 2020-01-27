@@ -1,0 +1,22 @@
+# elb-logs-to-cloudwatch
+
+Initially this project sift through ELB logs and extract 502 and 502s and publish to cloudwatch with the
+loadbalancer and target group as dimensions. It can be used to trigger alarms on cloudwatch in order to scale
+services.
+
+## Required configuration
+This module requires that you have a running docker (to build the rust code for lambda) and
+python (required by [terraform-aws-lambda](https://github.com/claranet/terraform-aws-lambda))
+
+## Using with terraform
+```hcl
+module "elb_logs_to_cloud_watch" {
+  source     = "github.com/devsbb/elb-logs-to-cloudwatch"
+  aws_region = "eu-central-1"
+  buckets    = ["bucket-a", "bucket-b"]
+  cloudwatch_metric_name = "BadGatewayRequestCount"
+  cloudwatch_namespace   = "Grover/LambdaParser"
+}
+```
+The final binary will be compiled and a zip will be uploaded to s3 in order to run the lambda.
+In the future we will provide a pre-compiled binary to avoid depending on docker for the final deployment.
