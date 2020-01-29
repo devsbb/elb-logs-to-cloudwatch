@@ -1,0 +1,12 @@
+name: terraform
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Terraform-Lint
+      uses: actionshub/terraform-lint@1.0.0
