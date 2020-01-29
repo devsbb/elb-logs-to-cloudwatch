@@ -28,8 +28,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           mkdir github-release
-          mv target/lambda/release/elb-logs-to-cloudwatch{,-lambda-$VERSION}.zip
-          mv target/lambda/release/elb*zip github-release/
+          cp target/lambda/release/elb-logs-to-cloudwatch.zip github-release/elb-logs-to-cloudwatch-lambda-$VERSION.zip
 
       - name: Release
         uses: softprops/action-gh-release@v1
