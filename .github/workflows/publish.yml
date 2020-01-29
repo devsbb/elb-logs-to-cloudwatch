@@ -1,0 +1,40 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build lambda zip file
+        run: >
+          docker run --rm
+          -v "$PWD":/code
+          -v "${HOME}/.cargo/registry":/root/.cargo/registry
+          -v "${HOME}/.cargo/git":/root/.cargo/git
+          softprops/lambda-rust
+      - name: Rename file
+        run: |
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          mkdir github-release
+          mv target/lambda/release/elb-logs-to-cloudwatch{,-lambda-$VERSION}.zip
+          mv target/lambda/release/elb*zip github-release/
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            LICENSE
+            github-release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
