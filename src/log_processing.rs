@@ -7,7 +7,6 @@ use log::{info, trace};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Dimension, MetricDatum, PutMetricDataInput};
 use serde::de::DeserializeOwned;
 
-use crate::s3::process_s3_file;
 use crate::types::RequestLogLine;
 use crate::CONFIG;
 
@@ -27,7 +26,7 @@ thread_local! {
     static CLOUDWATCH_CLIENT: CloudWatchClient = CloudWatchClient::new(CONFIG.aws_region.clone());
 }
 
-pub(crate) fn read_log_file<T, R>(file: R) -> impl Iterator<Item = Result<T>>
+pub(crate) fn parse_log_stream<T, R>(file: R) -> impl Iterator<Item = Result<T>>
 where
     T: DeserializeOwned,
     R: Read,
@@ -40,10 +39,12 @@ where
         .map(|f| f.map_err(|e| anyhow::Error::new(e).context("failed to read a log line")))
 }
 
-pub(crate) fn process_log_file(bucket: &str, key: &str) -> Result<()> {
-    let buffer = process_s3_file(bucket, key)?;
-    let lines = read_log_file::<RequestLogLine, _>(buffer);
-    info!("Processing {}", key);
+pub(crate) fn process_log<R>(buffer: R) -> Result<()>
+where
+    R: Read,
+{
+    let lines = parse_log_stream::<RequestLogLine, _>(buffer);
+    info!("Processing file");
     for lines_result in lines
         .filter(|line| {
             if line.is_ok() {
@@ -61,7 +62,7 @@ pub(crate) fn process_log_file(bucket: &str, key: &str) -> Result<()> {
         info!("Processed {:?} lines", lines_result?);
     }
 
-    info!("Processed {}", key);
+    info!("Processed");
     Ok(())
 }
 

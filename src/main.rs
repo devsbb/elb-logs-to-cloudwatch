@@ -1,4 +1,5 @@
 use std::env;
+use std::env::var_os;
 use std::fmt::Debug;
 
 use anyhow::Result;
@@ -9,8 +10,8 @@ use rusoto_core::Region;
 use structopt::StructOpt;
 
 use crate::handlers::handler;
-use crate::log_processing::process_log_file;
-use std::env::var_os;
+use crate::log_processing::process_log;
+use crate::s3::open_s3_file;
 
 mod error;
 mod handlers;
@@ -54,7 +55,7 @@ fn main() -> Result<()> {
         lambda!(handler);
     } else {
         for bucket_key in &CONFIG.bucket_keys {
-            process_log_file(&CONFIG.bucket_name, &bucket_key)?
+            process_log(open_s3_file(&CONFIG.bucket_name, &bucket_key)?)?
         }
     }
 

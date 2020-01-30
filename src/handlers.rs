@@ -5,16 +5,21 @@ use lambda_runtime::Context;
 use log::{error, info};
 
 use crate::error::HandlerError;
-use crate::log_processing::process_log_file;
+use crate::log_processing::process_log;
+use crate::s3::open_s3_file;
 
 pub fn handler(event: S3Event, _context: Context) -> Result<(), HandlerError> {
     info!("Got an S3 event {:#?}", event);
     for record in event.records {
-        process_log_file(
+        let buffer = open_s3_file(
             &record.s3.bucket.name.unwrap(),
             &record.s3.object.key.unwrap(),
         )
         .map_err(|error| {
+            error!("Failed to read S3 file {:?}", error);
+            HandlerError::S3Error(error)
+        })?;
+        process_log(buffer).map_err(|error| {
             error!("Failed to process log file {:?}", error);
             HandlerError::Unknown(error)
         })?;

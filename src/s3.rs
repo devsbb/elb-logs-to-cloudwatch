@@ -11,7 +11,7 @@ lazy_static::lazy_static! {
     static ref S3_CLIENT: S3Client = S3Client::new(CONFIG.aws_region.clone());
 }
 
-pub(crate) fn process_s3_file(bucket: &str, key: &str) -> Result<impl Read> {
+pub(crate) fn open_s3_file(bucket: &str, key: &str) -> Result<impl Read> {
     info!("Starting to download from s3://{}/{}", bucket, key);
     let request = rusoto_s3::GetObjectRequest {
         bucket: bucket.to_owned(),
