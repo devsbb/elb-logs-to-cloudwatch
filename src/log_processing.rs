@@ -41,7 +41,8 @@ where
 }
 
 pub(crate) fn process_log_file(bucket: &str, key: &str) -> Result<()> {
-    let lines = process_s3_file::<RequestLogLine>(bucket, key)?;
+    let buffer = process_s3_file(bucket, key)?;
+    let lines = read_log_file::<RequestLogLine, _>(buffer);
     info!("Processing {}", key);
     for lines_result in lines
         .filter(|line| {

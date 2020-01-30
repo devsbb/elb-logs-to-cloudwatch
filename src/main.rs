@@ -27,9 +27,9 @@ lazy_static::lazy_static! {
 struct Config {
     #[structopt(short, long, env)]
     pub aws_region: Region,
-    #[structopt(short, long, env)]
+    #[structopt(short = "n", long, env)]
     pub cloudwatch_namespace: String,
-    #[structopt(short, long, env)]
+    #[structopt(short = "m", long, env)]
     pub cloudwatch_metric_name: String,
     #[structopt(short, long, env)]
     pub bucket_name: String,
