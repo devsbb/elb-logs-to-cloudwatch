@@ -1,12 +1,12 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::pipelines::SCHEME;
 
 /// Type used to represent fields where AWS sends a `-` when the target group could not be reached
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 #[serde(untagged)]
 pub enum MaybeNumber<T> {
     Number(T),
@@ -31,7 +31,7 @@ impl From<&str> for Request {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct RequestLogLine {
     pub request_type: String,
     pub timestamp: DateTime<Utc>,

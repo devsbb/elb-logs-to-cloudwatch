@@ -8,14 +8,14 @@ use serde::de::DeserializeOwned;
 use crate::pipelines::Pipeline;
 use crate::types::RequestLogLine;
 
+const LOG_DELIMITER: u8 = b' ';
+
 pub(crate) fn parse_log_stream<T, R>(file: R) -> impl Iterator<Item = Result<T>>
 where
     T: DeserializeOwned,
     R: Read,
 {
-    csv::ReaderBuilder::new()
-        .delimiter(b' ')
-        .has_headers(false)
+    csv_reader_builder()
         .from_reader(file)
         .into_deserialize()
         .map(|f| {
@@ -52,6 +52,19 @@ where
     info!("Processed");
     Ok(())
 }
+
+pub(crate) fn csv_writer_builder() -> csv::WriterBuilder {
+    let mut writer = csv::WriterBuilder::new();
+    writer.delimiter(LOG_DELIMITER).has_headers(false);
+    writer
+}
+
+pub(crate) fn csv_reader_builder() -> csv::ReaderBuilder {
+    let mut reader = csv::ReaderBuilder::new();
+    reader.delimiter(LOG_DELIMITER).has_headers(false);
+    reader
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
