@@ -14,8 +14,22 @@ module "elb_logs_to_cloud_watch" {
   source     = "github.com/devsbb/elb-logs-to-cloudwatch"
   aws_region = "eu-central-1"
   buckets    = ["bucket-a", "bucket-b"]
-  cloudwatch_metric_name = "BadGatewayRequestCount"
-  cloudwatch_namespace   = "Grover/LambdaParser"
+  pipelines = jsonencode([
+    {
+      filter = "elb_status_code in {502..503}",
+      output = {
+        type        = "cloudwatch_metric"
+        metric_name = "BadGatewayRequestCount",
+        namespace   = "Grover/LambdaParser"
+      }
+    },
+    {
+      filter = "elb_status_code > 0",
+      output = {
+        type = "stdout"
+      }
+    }
+  ])
 }
 ```
 The final binary will be compiled and a zip will be uploaded to s3 in order to run the lambda.
