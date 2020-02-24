@@ -1,0 +1,3 @@
+[clog]
+repository = "https://github.com/devsbb/elb-logs-to-cloudwatch"
+from-latest-tag = true
