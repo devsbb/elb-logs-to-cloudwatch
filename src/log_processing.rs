@@ -1,30 +1,12 @@
-use std::collections::HashSet;
 use std::io::Read;
 
 use anyhow::{Context as _, Result};
-use itertools::Itertools;
 use log::{info, trace};
-use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Dimension, MetricDatum, PutMetricDataInput};
+
 use serde::de::DeserializeOwned;
 
+use crate::pipelines::Pipeline;
 use crate::types::RequestLogLine;
-use crate::CONFIG;
-
-const CLOUDWATCH_BATCH_SIZE: usize = 20;
-
-lazy_static::lazy_static! {
-    static ref INTERESTING_ERRORS: HashSet<u16> = {
-        let mut hash = HashSet::new();
-        for code in [502, 503].iter() {
-            hash.insert(*code);
-        }
-        hash
-    };
-}
-
-thread_local! {
-    static CLOUDWATCH_CLIENT: CloudWatchClient = CloudWatchClient::new(CONFIG.aws_region.clone());
-}
 
 pub(crate) fn parse_log_stream<T, R>(file: R) -> impl Iterator<Item = Result<T>>
 where
@@ -36,74 +18,65 @@ where
         .has_headers(false)
         .from_reader(file)
         .into_deserialize()
-        .map(|f| f.map_err(|e| anyhow::Error::new(e).context("failed to read a log line")))
+        .map(|f| {
+            f.map_err(anyhow::Error::new)
+                .context("failed to read a log line")
+        })
 }
 
-pub(crate) fn process_log<R>(buffer: R) -> Result<()>
+pub(crate) fn process_log<R>(buffer: R, pipelines: &[(&Pipeline, wirefilter::Filter)]) -> Result<()>
 where
     R: Read,
 {
     let lines = parse_log_stream::<RequestLogLine, _>(buffer);
     info!("Processing file");
-    for lines_result in lines
+
+    for line in lines
         .filter(|line| {
             if line.is_ok() {
                 return true;
             }
             trace!("Skipping line because of error {:?}", line);
-            return false;
+            false
         })
         .map(Result::unwrap)
-        .filter(|line| INTERESTING_ERRORS.contains(&line.elb_status_code))
-        .chunks(CLOUDWATCH_BATCH_SIZE)
-        .into_iter()
-        .map(|lines| process_log_line(lines.collect()))
     {
-        info!("Processed {:?} lines", lines_result?);
+        let context = line.execution_context()?;
+        for (pipeline, filter) in pipelines {
+            if filter.execute(&context).unwrap() {
+                pipeline.output.get_log_processor().process_line(&line)?;
+            }
+        }
     }
 
     info!("Processed");
     Ok(())
 }
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
 
-fn process_log_line(lines: Vec<RequestLogLine>) -> Result<usize> {
-    let input = PutMetricDataInput {
-        namespace: CONFIG.cloudwatch_namespace.clone(),
-        metric_data: lines
-            .iter()
-            .map(log_line_to_metric)
-            .collect::<Result<Vec<MetricDatum>>>()
-            .context("error converting log line to metric")?,
-    };
+    use anyhow::Result;
 
-    let response =
-        CLOUDWATCH_CLIENT.with(|client: &CloudWatchClient| client.put_metric_data(input).sync());
-    response
-        .map_err(|e| {
-            let context = format!("error sending metric {:?}", e);
-            anyhow::Error::new(e).context(context)
-        })
-        .unwrap();
-    Ok(lines.len())
-}
+    use crate::log_processing::parse_log_stream;
+    use crate::types::RequestLogLine;
 
-fn log_line_to_metric(line: &RequestLogLine) -> Result<MetricDatum> {
-    let dimension = line.cloudwatch_dimension()?;
-    Ok(MetricDatum {
-        dimensions: Some(vec![
-            Dimension {
-                name: "TargetGroup".to_string(),
-                value: dimension.target_group,
-            },
-            Dimension {
-                name: "LoadBalancer".to_string(),
-                value: dimension.load_balancer,
-            },
-        ]),
-        metric_name: CONFIG.cloudwatch_metric_name.clone(),
-        value: Some(1.0),
-        unit: Some("Count".to_string()),
-        timestamp: Some(line.request_creation_time.to_rfc3339()),
-        ..Default::default()
-    })
+    const GOOD_LOGS: &str = include_str!("../tests/fixtures/logs.txt");
+    const BAD_LOGS: &str = include_str!("../tests/fixtures/bad_logs.txt");
+
+    fn parse_logs(csv_data: &str) -> Vec<RequestLogLine> {
+        let log_lines: Result<Vec<RequestLogLine>> =
+            parse_log_stream(Cursor::new(csv_data)).collect();
+
+        log_lines.unwrap()
+    }
+
+    #[test]
+    fn test_log_parsing() {
+        let log_lines = parse_logs(GOOD_LOGS);
+        assert_eq!(log_lines.len(), 10);
+
+        let bad_logs = parse_logs(BAD_LOGS);
+        assert_eq!(bad_logs.len(), 13);
+    }
 }

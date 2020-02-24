@@ -21,11 +21,10 @@ module "lambda" {
   environment = {
     variables = {
       // TODO: Remove dependency from this as the event has the bucket
-      BUCKET_NAME            = ""
-      RUST_BACKTRACE         = 1
-      INSIDE_LAMBDA          = 1
-      CLOUDWATCH_NAMESPACE   = var.cloudwatch_namespace
-      CLOUDWATCH_METRIC_NAME = var.cloudwatch_metric_name
+      BUCKET_NAME    = ""
+      RUST_BACKTRACE = 1
+      INSIDE_LAMBDA  = 1
+      PIPELINES      = var.pipelines
     }
   }
 }

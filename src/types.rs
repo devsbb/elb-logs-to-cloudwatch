@@ -1,9 +1,12 @@
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use chrono::{DateTime, Utc};
+
 use serde::Deserialize;
 
+use crate::pipelines::SCHEME;
+
 /// Type used to represent fields where AWS sends a `-` when the target group could not be reached
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 pub enum MaybeNumber<T> {
     Number(T),
@@ -19,7 +22,7 @@ pub(crate) struct Request {
 
 impl From<&str> for Request {
     fn from(data: &str) -> Self {
-        let mut parts = data.split(" ");
+        let mut parts = data.split(' ');
         Request {
             method: parts.next().unwrap().to_owned(),
             path: parts.next().unwrap().to_owned(),
@@ -28,7 +31,7 @@ impl From<&str> for Request {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub(crate) struct RequestLogLine {
     pub request_type: String,
     pub timestamp: DateTime<Utc>,
@@ -62,32 +65,24 @@ impl RequestLogLine {
         Request::from(self.request.as_str())
     }
 
-    pub fn cloudwatch_dimension(&self) -> Result<CloudwatchDimension> {
-        if self.target_group_arn == "-" {
-            return Err(anyhow::anyhow!(format!(
-                "invalid target group {}",
-                self.target_group_arn
-            )));
-        }
-        Ok(CloudwatchDimension {
-            load_balancer: self.elb_name.clone(),
-            target_group: self
-                .target_group_arn
-                .split(":")
-                .last()
-                .with_context(|| {
-                    format!(
-                        "failed to get a valid target from from {}",
-                        self.target_group_arn
-                    )
-                })?
-                .to_owned(),
-        })
+    pub fn execution_context<'s, 'e>(&'s self) -> Result<wirefilter::ExecutionContext<'e>>
+    where
+        's: 'e,
+    {
+        let mut context = wirefilter::ExecutionContext::new(&*SCHEME);
+        context
+            .set_field_value("elb_status_code", self.elb_status_code as i32)
+            .unwrap();
+        context
+            .set_field_value("user_agent", self.user_agent.as_str())
+            .unwrap();
+        context
+            .set_field_value("target_group_arn", self.target_group_arn.as_str())
+            .unwrap();
+        Ok(context)
     }
 }
 
-#[derive(Debug)]
-pub struct CloudwatchDimension {
-    pub load_balancer: String,
-    pub target_group: String,
+pub(crate) trait LogProcessor {
+    fn process_line(&self, log_line: &RequestLogLine) -> Result<()>;
 }
