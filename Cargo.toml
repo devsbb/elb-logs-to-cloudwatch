@@ -20,6 +20,7 @@ lazy_static = "1.4.0"
 log = "0.4.8"
 rusoto_cloudwatch = "0.42.0"
 rusoto_core = "0.42.0"
+rusoto_logs = "0.42.0"
 rusoto_s3 = "0.42.0"
 serde = {version = "1.0.104", features = ["derive"]}
 serde_json = "1.0.48"

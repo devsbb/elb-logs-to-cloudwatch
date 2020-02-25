@@ -1,12 +1,12 @@
 use std::cell::RefCell;
 
 use anyhow::{Context, Result};
-use log::{debug, trace};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Dimension, MetricDatum, PutMetricDataInput};
 use rusoto_core::Region;
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
 
+use crate::output::buffered_trait::BufferedLogProcessor;
 use crate::types::{LogProcessor, RequestLogLine};
 
 const CLOUDWATCH_BATCH_SIZE: usize = 20;
@@ -29,37 +29,25 @@ pub struct CloudwatchDimension {
 
 impl LogProcessor for CloudwatchMetricOutput {
     fn process_line(&self, log_line: &RequestLogLine) -> Result<()> {
-        self.push(&log_line)?;
+        self.add_to_queue(&log_line)?;
         Ok(())
     }
 }
-
-impl CloudwatchMetricOutput {
-    fn push(&self, log_line: &RequestLogLine) -> Result<()> {
-        if self.is_full() {
-            self.flush()?;
-        }
-
-        if log::log_enabled!(log::Level::Trace) {
-            trace!("Adding item, previous count {}", self.buffer.borrow().len());
-        }
-        self.buffer.borrow_mut().push((*log_line).clone());
-
-        Ok(())
+impl BufferedLogProcessor for CloudwatchMetricOutput {
+    fn maximum_buffer_size(&self) -> usize {
+        CLOUDWATCH_BATCH_SIZE
     }
 
-    fn flush(&self) -> Result<()> {
-        debug!("Flushing {} items", self.buffer.borrow().len());
-        if self.buffer.borrow().is_empty() {
-            return Ok(());
-        }
-        self.process_log_lines()?;
+    fn buffer_len(&self) -> usize {
+        self.buffer.borrow().len()
+    }
+
+    fn buffer_clear(&self) {
         self.buffer.borrow_mut().clear();
-        Ok(())
     }
 
-    fn is_full(&self) -> bool {
-        self.buffer.borrow().len() == CLOUDWATCH_BATCH_SIZE
+    fn push_to_buffer(&self, log_line: RequestLogLine) {
+        self.buffer.borrow_mut().push(log_line);
     }
 
     fn process_log_lines(&self) -> Result<()> {
@@ -84,7 +72,9 @@ impl CloudwatchMetricOutput {
             .unwrap();
         Ok(())
     }
+}
 
+impl CloudwatchMetricOutput {
     fn log_line_to_metric(&self, line: &RequestLogLine) -> Result<MetricDatum> {
         let dimension = self.cloudwatch_dimension(line)?;
         Ok(MetricDatum {
