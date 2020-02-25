@@ -28,7 +28,15 @@ module "elb_logs_to_cloud_watch" {
       output = {
         type = "stdout"
       }
-    }
+    },
+    {
+      filter = "target_group_arn matches \"main-website\" && user_agent matches \"(bot|Bot)\""
+      output = {
+        "type"        = "cloudwatch_log"
+        "group_name"  = "bots"
+        "stream_name" = "logs"
+      }
+    },
   ])
 }
 ```
