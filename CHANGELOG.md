@@ -1,3 +1,13 @@
+<a name="v0.3.0"></a>
+## v0.3.0 (2020-02-25)
+
+
+#### Features
+
+*   Add ability to send outputs to cloudwatch logs ([7c430056](https://github.com/devsbb/elb-logs-to-cloudwatch/commit/7c4300562aefb03bc6d77806981bc2537dfd1121))
+
+
+
 <a name="v0.2.0"></a>
 ## v0.2.0 (2020-02-24)
 
