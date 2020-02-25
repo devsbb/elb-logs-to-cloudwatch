@@ -97,7 +97,7 @@ impl CloudwatchLogOutput {
 
         Ok(InputLogEvent {
             message: String::from_utf8_lossy(buffer.get_ref()).to_string(),
-            timestamp: line.timestamp.timestamp() * 1000,
+            timestamp: line.timestamp.timestamp_millis(),
         })
     }
 
