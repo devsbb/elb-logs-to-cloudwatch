@@ -1,3 +1,13 @@
+<a name="v0.3.1"></a>
+### v0.3.1 (2020-02-28)
+
+
+#### Bug Fixes
+
+*   Implement Drop for CloudwatchLogOutput ([85b77e09](https://github.com/devsbb/elb-logs-to-cloudwatch/commit/85b77e093c3932d9cc0b110236272868404b35f7))
+
+
+
 <a name="v0.3.0"></a>
 ## v0.3.0 (2020-02-25)
 
