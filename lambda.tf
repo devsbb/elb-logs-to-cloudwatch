@@ -6,7 +6,7 @@ module "lambda" {
   handler                        = "main.lambda_handler"
   runtime                        = "provided"
   timeout                        = 300
-  reserved_concurrent_executions = 1
+  reserved_concurrent_executions = var.reserved_concurrent_executions
 
   // Specify a file or directory for the source code.
   source_path   = "${abspath(path.module)}/src"
