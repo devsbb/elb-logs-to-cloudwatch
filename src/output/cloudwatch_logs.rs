@@ -132,3 +132,9 @@ impl CloudwatchLogOutput {
         Ok(())
     }
 }
+
+impl Drop for CloudwatchLogOutput {
+    fn drop(&mut self) {
+        self.flush().expect("failed to flush logs");
+    }
+}
