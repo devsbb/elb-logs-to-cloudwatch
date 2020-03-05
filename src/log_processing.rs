@@ -10,6 +10,12 @@ use crate::types::RequestLogLine;
 
 const LOG_DELIMITER: u8 = b' ';
 
+#[derive(Debug)]
+pub(crate) struct ProcessLogOutput {
+    pub total_lines: u64,
+    pub matched_lines: u64,
+}
+
 pub(crate) fn parse_log_stream<T, R>(file: R) -> impl Iterator<Item = Result<T>>
 where
     T: DeserializeOwned,
@@ -24,14 +30,20 @@ where
         })
 }
 
-pub(crate) fn process_log<R>(buffer: R, pipelines: &[(&Pipeline, wirefilter::Filter)]) -> Result<()>
+pub(crate) fn process_log<R>(
+    buffer: R,
+    pipelines: &[(&Pipeline, wirefilter::Filter)],
+) -> Result<ProcessLogOutput>
 where
     R: Read,
 {
+    let mut total_lines = 0;
+    let mut matched_lines = 0;
     let lines = parse_log_stream::<RequestLogLine, _>(buffer);
     info!("Processing file");
 
     for line in lines
+        .inspect(|_| total_lines += 1)
         .filter(|line| {
             if line.is_ok() {
                 return true;
@@ -45,12 +57,16 @@ where
         for (pipeline, filter) in pipelines {
             if filter.execute(&context).unwrap() {
                 pipeline.output.get_log_processor().process_line(&line)?;
+                matched_lines += 0;
             }
         }
     }
 
     info!("Processed");
-    Ok(())
+    Ok(ProcessLogOutput {
+        total_lines,
+        matched_lines,
+    })
 }
 
 pub(crate) fn csv_writer_builder() -> csv::WriterBuilder {

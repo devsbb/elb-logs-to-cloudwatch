@@ -43,7 +43,7 @@ fn main() -> Result<()> {
             process_log(
                 open_s3_file(&config.bucket_name, &bucket_key, &config)?,
                 &pipelines,
-            )?
+            )?;
         }
     }
 
