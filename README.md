@@ -42,3 +42,8 @@ module "elb_logs_to_cloud_watch" {
 ```
 The final binary will be compiled and a zip will be uploaded to s3 in order to run the lambda.
 In the future we will provide a pre-compiled binary to avoid depending on docker for the final deployment.
+
+### Performance
+This project has some benchmarks just to make sure we have no big regression but its idea is not to run fast but
+being a bit more memory efficient (to run in a simple lambda) as we read CSV lines from S3 in a streaming manner and
+making a few copies of those lines before moving to other chunks of the log file.

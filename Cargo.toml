@@ -29,3 +29,13 @@ structopt = "0.3.9"
 thiserror = "1.0.9"
 uuid = { version = "0.8.1", features = ["v4"] }
 wirefilter-engine = {git = "https://github.com/cloudflare/wirefilter", branch = "master"}
+
+[dev-dependencies]
+criterion = "0.3.1"
+
+[[bench]]
+name = "void"
+harness = false
+
+[profile.release]
+debug = true

@@ -14,7 +14,7 @@ pub enum MaybeNumber<T> {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct Request {
+pub struct Request {
     pub method: String,
     pub path: String,
     pub http_version: String,
@@ -32,7 +32,7 @@ impl From<&str> for Request {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub(crate) struct RequestLogLine {
+pub struct RequestLogLine {
     pub request_type: String,
     pub timestamp: DateTime<Utc>,
     pub elb_name: String,
@@ -83,6 +83,6 @@ impl RequestLogLine {
     }
 }
 
-pub(crate) trait LogProcessor {
+pub trait LogProcessor {
     fn process_line(&self, log_line: &RequestLogLine) -> Result<()>;
 }

@@ -15,7 +15,7 @@ use std::time::Instant;
 pub fn handler(event: S3Event, _context: Context) -> Result<(), HandlerError> {
     info!("Got an S3 event {:#?}", event);
     let config = config::from_args();
-    let pipelines = compile_pipelines(&config);
+    let pipelines = compile_pipelines(&config.pipelines);
     let start_time = Instant::now();
     let mut total_lines = 0;
     let mut matched_lines = 0;

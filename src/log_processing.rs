@@ -2,7 +2,6 @@ use std::io::Read;
 
 use anyhow::{Context as _, Result};
 use log::{info, trace};
-
 use serde::de::DeserializeOwned;
 
 use crate::pipelines::Pipeline;
@@ -11,7 +10,7 @@ use crate::types::RequestLogLine;
 const LOG_DELIMITER: u8 = b' ';
 
 #[derive(Debug)]
-pub(crate) struct ProcessLogOutput {
+pub struct ProcessLogOutput {
     pub total_lines: u64,
     pub matched_lines: u64,
 }
@@ -30,7 +29,7 @@ where
         })
 }
 
-pub(crate) fn process_log<R>(
+pub fn process_log<R>(
     buffer: R,
     pipelines: &[(&Pipeline, wirefilter::Filter)],
 ) -> Result<ProcessLogOutput>
@@ -57,7 +56,7 @@ where
         for (pipeline, filter) in pipelines {
             if filter.execute(&context).unwrap() {
                 pipeline.output.get_log_processor().process_line(&line)?;
-                matched_lines += 0;
+                matched_lines += 1;
             }
         }
     }
@@ -87,7 +86,10 @@ mod tests {
 
     use anyhow::Result;
 
-    use crate::log_processing::parse_log_stream;
+    use crate::log_processing::{parse_log_stream, process_log};
+    use crate::output::void::VoidOutput;
+    use crate::output::OutputType;
+    use crate::pipelines::{compile_pipelines, Pipeline, Pipelines};
     use crate::types::RequestLogLine;
 
     const GOOD_LOGS: &str = include_str!("../tests/fixtures/logs.txt");
@@ -107,5 +109,17 @@ mod tests {
 
         let bad_logs = parse_logs(BAD_LOGS);
         assert_eq!(bad_logs.len(), 13);
+    }
+
+    #[test]
+    fn test_process_log() {
+        let raw_pipelines = Pipelines::new(vec![Pipeline {
+            filter: "elb_status_code == 200 && user_agent matches \"(Android|axios)\"".to_string(),
+            output: OutputType::Void(VoidOutput),
+        }]);
+        let pipelines = compile_pipelines(&raw_pipelines);
+        let result = process_log(Cursor::new(GOOD_LOGS), &pipelines).unwrap();
+        assert_eq!(6, result.matched_lines);
+        assert_eq!(10, result.total_lines);
     }
 }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::types::{LogProcessor, RequestLogLine};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct StdoutOutput {
+pub struct StdoutOutput {
     #[serde(skip, default = "crate::log_processing::csv_writer_builder")]
     writer: csv::WriterBuilder,
 }

@@ -11,15 +11,15 @@ use crate::log_processing::process_log;
 use crate::pipelines::compile_pipelines;
 use crate::s3::open_s3_file;
 
-mod error;
-mod handlers;
-mod log_processing;
-mod output;
-mod pipelines;
-mod s3;
-mod types;
+pub mod error;
+pub mod log_processing;
+pub mod output;
+pub mod pipelines;
+pub mod types;
 
 mod config;
+mod handlers;
+mod s3;
 
 fn main() -> Result<()> {
     if env::var_os(DEFAULT_FILTER_ENV).is_none() {
@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
     // Keep this here so the lambdas can bre pre-validated before they are actually executed
     let config = config::from_args();
-    let pipelines = compile_pipelines(&config);
+    let pipelines = compile_pipelines(&config.pipelines);
     info!("Configured pipelines: {:#?}", config.pipelines);
 
     if var_os("INSIDE_LAMBDA").is_some() {

@@ -33,6 +33,7 @@ impl LogProcessor for CloudwatchMetricOutput {
         Ok(())
     }
 }
+
 impl BufferedLogProcessor for CloudwatchMetricOutput {
     fn maximum_buffer_size(&self) -> usize {
         CLOUDWATCH_BATCH_SIZE
