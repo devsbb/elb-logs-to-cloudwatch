@@ -3,7 +3,7 @@ data "aws_iam_policy_document" "lambda" {
     actions = [
       "cloudwatch:PutMetricData",
       "logs:PutLogEvents",
-      "logs:DescribeLogStreams",
+      "logs:CreateLogStream",
     ]
 
     resources = ["*"]

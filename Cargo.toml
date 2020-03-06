@@ -27,5 +27,5 @@ serde_json = "1.0.48"
 smallvec = "1.2.0"
 structopt = "0.3.9"
 thiserror = "1.0.9"
-
+uuid = { version = "0.8.1", features = ["v4"] }
 wirefilter-engine = {git = "https://github.com/cloudflare/wirefilter", branch = "master"}

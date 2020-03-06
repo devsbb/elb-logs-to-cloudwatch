@@ -3,14 +3,15 @@ use std::io::{Cursor, Read};
 
 use anyhow::Result;
 use itertools::Itertools;
-use log::{error, trace};
+use log::error;
 use rusoto_core::Region;
 use rusoto_logs::{
-    CloudWatchLogs, CloudWatchLogsClient, DescribeLogStreamsRequest, InputLogEvent,
+    CloudWatchLogs, CloudWatchLogsClient, CreateLogStreamRequest, InputLogEvent,
     PutLogEventsRequest,
 };
 use serde::{Deserialize, Serialize};
 use smallvec::SmallVec;
+use uuid::Uuid;
 
 use crate::log_processing::csv_writer_builder;
 use crate::output::buffered_trait::BufferedLogProcessor;
@@ -21,13 +22,17 @@ const BUFFER_SIZE: usize = 10;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CloudwatchLogOutput {
     pub group_name: String,
-    pub stream_name: String,
+    pub stream_name_prefix: String,
     #[serde(skip)]
     buffer: RefCell<SmallVec<[RequestLogLine; BUFFER_SIZE]>>,
     #[serde(skip)]
     sequence_token: RefCell<Option<String>>,
     #[serde(skip)]
     aws_region: Region,
+    #[serde(skip, default = "Uuid::new_v4")]
+    stream_name_suffix: Uuid,
+    #[serde(skip)]
+    stream_created: RefCell<bool>,
 }
 
 impl LogProcessor for CloudwatchLogOutput {
@@ -56,18 +61,20 @@ impl BufferedLogProcessor for CloudwatchLogOutput {
 
     fn process_log_lines(&self) -> Result<()> {
         let cli = CloudWatchLogsClient::new(self.aws_region.clone());
-        self.fetch_next_sequence_token(&cli)?;
+        self.ensure_stream_exists(&cli)?;
+
+        let log_events = self
+            .buffer
+            .borrow()
+            .iter()
+            .sorted_by_key(|line| line.timestamp)
+            .map(|line| self.process_log_line(line))
+            .collect::<Result<_>>()?;
 
         let request = PutLogEventsRequest {
-            log_events: self
-                .buffer
-                .borrow()
-                .iter()
-                .sorted_by_key(|line| line.timestamp)
-                .map(|line| self.process_log_line(line))
-                .collect::<Result<_>>()?,
+            log_events,
             log_group_name: self.group_name.clone(),
-            log_stream_name: self.stream_name.clone(),
+            log_stream_name: self.get_full_stream_name(),
             sequence_token: self.sequence_token.borrow().clone(),
         };
 
@@ -101,35 +108,23 @@ impl CloudwatchLogOutput {
         })
     }
 
-    fn fetch_next_sequence_token(&self, cli: &CloudWatchLogsClient) -> Result<()> {
-        if self.sequence_token.borrow().is_some() {
+    fn ensure_stream_exists(&self, cli: &CloudWatchLogsClient) -> Result<()> {
+        if *self.stream_created.borrow() {
             return Ok(());
         }
-        trace!("Trying to fetch next sequence token");
 
-        let request = DescribeLogStreamsRequest {
-            limit: Some(1),
+        let request = CreateLogStreamRequest {
             log_group_name: self.group_name.clone(),
-            log_stream_name_prefix: Some(self.stream_name.clone()),
-            ..Default::default()
-        };
-        let response = cli.describe_log_streams(request).sync()?;
-        if let Some(streams) = response.log_streams {
-            if let Some(stream) = streams.get(0) {
-                trace!(
-                    "Fetched next token {:?} response {:#?}",
-                    stream.upload_sequence_token,
-                    stream,
-                );
-                *self.sequence_token.borrow_mut() = stream.upload_sequence_token.clone()
-            } else {
-                trace!("Streams were empty");
-            }
-        } else {
-            trace!("No streams found");
+            log_stream_name: self.get_full_stream_name(),
         };
 
+        cli.create_log_stream(request).sync()?;
+        *self.stream_created.borrow_mut() = true;
         Ok(())
+    }
+
+    fn get_full_stream_name(&self) -> String {
+        format!("{}-{}", self.stream_name_prefix, self.stream_name_suffix)
     }
 }
 
