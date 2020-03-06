@@ -1,3 +1,17 @@
+<a name="v0.4.0"></a>
+## v0.4.0 (2020-03-06)
+
+
+#### Breaking Changes
+
+*   Change clouwatch logs output to use a stream prefix ([0adeda5b](https://github.com/devsbb/elb-logs-to-cloudwatch/commit/0adeda5bfb963291a0aace46de0c2017c5a5bb5a), breaks [#](https://github.com/devsbb/elb-logs-to-cloudwatch/issues/))
+
+#### Features
+
+*   Change clouwatch logs output to use a stream prefix ([0adeda5b](https://github.com/devsbb/elb-logs-to-cloudwatch/commit/0adeda5bfb963291a0aace46de0c2017c5a5bb5a), breaks [#](https://github.com/devsbb/elb-logs-to-cloudwatch/issues/))
+
+
+
 <a name="v0.3.1"></a>
 ### v0.3.1 (2020-02-28)
 
