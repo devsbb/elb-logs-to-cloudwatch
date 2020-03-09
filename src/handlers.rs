@@ -2,7 +2,7 @@ use std::result::Result;
 
 use aws_lambda_events::event::s3::S3Event;
 use lambda_runtime::Context;
-use log::{error, info};
+use log::{error, info, trace};
 
 use crate::config;
 
@@ -13,7 +13,7 @@ use crate::s3::open_s3_file;
 use std::time::Instant;
 
 pub fn handler(event: S3Event, _context: Context) -> Result<(), HandlerError> {
-    info!("Got an S3 event {:#?}", event);
+    trace!("Got an S3 event {:#?}", event);
     let config = config::from_args();
     let pipelines = compile_pipelines(&config.pipelines);
     let start_time = Instant::now();
