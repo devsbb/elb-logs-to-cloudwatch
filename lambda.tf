@@ -10,7 +10,7 @@ module "lambda" {
 
   // Specify a file or directory for the source code.
   source_path   = "${abspath(path.module)}/src"
-  build_command = "${abspath(path.module)}/build-lambda.sh '$filename' '$runtime' '$source'"
+  build_command = "${abspath(path.module)}/build-lambda-from-releases.sh '$filename' '$runtime' '$source'"
 
   // Attach a policy.
   policy = {
